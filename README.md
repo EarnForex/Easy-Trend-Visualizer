@@ -3,7 +3,7 @@ Easy Trend Visualizer is a custom indicator for MT4 and MT5 coded by EarnForex.c
 
 It provides a range of configurable alerts for you to get norifications of various trend-related events on the chart. 
 
-![Easy Trend Visualizer indicator marks some important trend developments on the M1 EUR/USD chart](https://github.com/EarnForex/Easy-Trend-Visualizer/blob/main/README_Images/Easy Trend Visualizer Shows Trends on Short-Term EURUSD Chart.png)
+![Easy Trend Visualizer indicator marks some important trend developments on the M1 EUR/USD chart](https://github.com/EarnForex/Easy-Trend-Visualizer/blob/main/README_Images/Easy%20Trend%20Visualizer%20Shows%20Trends%20on%20Short-Term%20EURUSD%20Chart.png)
 
 More information about this custom MetaTrader indicator is available here: https://www.earnforex.com/metatrader-indicators/EasyTrendVisualizer/
 
