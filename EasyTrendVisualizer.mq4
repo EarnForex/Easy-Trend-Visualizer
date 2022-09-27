@@ -6,7 +6,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright © 2009-2022, EarnForex"
 #property link      "https://www.earnforex.com/metatrader-indicators/EasyTrendVisualizer/"
-#property version   "1.10"
+#property version   "1.11"
 #property strict
 
 #property description "Easy Trend Visualizer - displays trend strength, direction, and support and resistance levels."
@@ -35,6 +35,7 @@ input bool UseAlertUpDownArrows = false;
 input int NumberPHLtoTrack = 0; // How many previous horizontal lines to track for alert purposes?
 input int IgnorePHLShorterThan = 2; // Ignore previous horizontal lines short than
 input color PHLC_Arrow_Color = clrChocolate;
+input bool NativeAlerts = false; // Use pop-up alerts?
 input bool SendEmails = false; // Send alerts via email?
 input bool SendNotifications = false; // Send alerts via push notifications?
 
@@ -206,66 +207,66 @@ int start()
         }
     }
 
-    string DateTime = TimeToString(Time[0]);
-    string PerStr = PeriodToString(Period());
-    if (UseAlertHorizontalLine)
+    // If at least one type and one source of alerts is defined.
+    if (((NativeAlerts) || (SendEmails) || (SendNotifications)) && ((UseAlertHorizontalLine) || (UseAlertHorizontalLineCross) || (UseAlertUpDownArrows)))
     {
-        if ((Ex[1] != EMPTY_VALUE) && (Ex[1] != was_alert_hl) && (Ex[1] != Ex[2]))
+        string DateTime = TimeToString(Time[0]);
+        string PerStr = PeriodToString(Period());
+        if (UseAlertHorizontalLine)
         {
-            string text = "ETV - HL Start ";
-            if (To[2] != EMPTY_VALUE) text += "After Uptrend ";
-            else if (Tc[2] != EMPTY_VALUE) text += "After Downtrend ";
-            text += DateTime;
-            Alert(text);
-            text += " " + Symbol() + " @ " + PerStr;
-            if (SendEmails) SendMail(text, text);
-            if (SendNotifications) SendNotification(text);
-            was_alert_hl = Ex[1];
+            if ((Ex[1] != EMPTY_VALUE) && (Ex[1] != was_alert_hl) && (Ex[1] != Ex[2]))
+            {
+                string text = "ETV - HL Start ";
+                if (To[2] < Tc[2]) text += "After Uptrend ";
+                else if (To[2] > Tc[2]) text += "After Downtrend ";
+                text += Symbol() + " @ " + PerStr;
+                if (NativeAlerts) Alert(text);
+                if (SendEmails) SendMail(text, text);
+                if (SendNotifications) SendNotification(text);
+                was_alert_hl = Ex[1];
+            }
+        }
+        if (UseAlertHorizontalLineCross)
+        {
+            if ((Ex[1] != EMPTY_VALUE) && (Ex[2] != EMPTY_VALUE) && (was_alert_hlcross != Time[1]) && (((Close[1] > Ex[1]) && (Open[1] <= Ex[1])) || ((Close[1] <= Ex[1]) && (Open[1] > Ex[1]))))
+            {
+                string text = "ETV - HL Cross ";
+                if (Open[1] < Close[1]) text += "Up ";
+                else if (Open[1] > Close[1]) text += "Down ";
+                text += Symbol() + " @ " + PerStr;
+                if (NativeAlerts) Alert(text);
+                if (SendEmails) SendMail(text, text);
+                if (SendNotifications) SendNotification(text);
+                was_alert_hlcross = Time[1];
+            }
+        }
+        if (UseAlertUpDownArrows)
+        {
+            if ((Up[0] != EMPTY_VALUE) && (Up[0] != was_alert_au))
+            {
+                string text = "ETV - Arrow Up " + Symbol() + " @ " + PerStr;
+                if (NativeAlerts) Alert(text);
+                if (SendEmails) SendMail(text, text);
+                if (SendNotifications) SendNotification(text);
+                was_alert_au = Up[0];
+            }
+            if ((Dn[0] != EMPTY_VALUE) && (Dn[0] != was_alert_ad))
+            {
+                string text = "ETV - Arrow Down " + Symbol() + " @ " + PerStr;
+                if (NativeAlerts) Alert(text);
+                if (SendEmails) SendMail(text, text);
+                if (SendNotifications) SendNotification(text);
+                was_alert_ad = Dn[0];
+            }
+        }
+        // Alerts for the previous HL crosses.
+        if (NumberPHLtoTrack > 0)
+        {
+            DateTime = TimeToString(Time[1]);
+            CheckImaginaryLinesCrosses(DateTime, PerStr);
         }
     }
-    if (UseAlertHorizontalLineCross)
-    {
-        if ((Ex[1] != EMPTY_VALUE) && (Ex[2] != EMPTY_VALUE) && (was_alert_hlcross != Time[1]) && (((Close[1] > Ex[1]) && (Open[1] <= Ex[1])) || ((Close[1] <= Ex[1]) && (Open[1] > Ex[1]))))
-        {
-            string text = "ETV - HL Cross ";
-            if (Open[1] < Close[1]) text += "Up ";
-            else if (Open[1] > Close[1]) text += "Down ";
-            text += DateTime;
-            Alert(text);
-            text += " " + Symbol() + " @ " + PerStr;
-            if (SendEmails) SendMail(text, text);
-            if (SendNotifications) SendNotification(text);
-            was_alert_hlcross = Time[1];
-        }
-    }
-    if (UseAlertUpDownArrows)
-    {
-        if ((Up[0] != EMPTY_VALUE) && (Up[0] != was_alert_au))
-        {
-            string text = "ETV - Arrow Up " + DateTime;
-            Alert(text);
-            text += " " + Symbol() + " @ " + PerStr;
-            if (SendEmails) SendMail(text, text);
-            if (SendNotifications) SendNotification(text);
-            was_alert_au = Up[0];
-        }
-        if ((Dn[0] != EMPTY_VALUE) && (Dn[0] != was_alert_ad))
-        {
-            string text = "ETV - Arrow Down " + DateTime;
-            Alert(text);
-            text += " " + Symbol() + " @ " + PerStr;
-            if (SendEmails) SendMail(text, text);
-            if (SendNotifications) SendNotification(text);
-            was_alert_ad = Dn[0];
-        }
-    }
-    // Alerts for the previous HL crosses.
-    if (NumberPHLtoTrack > 0)
-    {
-        DateTime = TimeToString(Time[1]);
-        CheckImaginaryLinesCrosses(DateTime, PerStr);
-    }
-
+    
     return(0);
 }
 
