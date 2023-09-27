@@ -1,12 +1,12 @@
 // Original indicator by KurlFX 23/6/09
 //+------------------------------------------------------------------+
 //|                                            Easy Trend Visualizer |
-//|                                 Copyright © 2009-2022, EarnForex |
+//|                                      Copyright © 2023, EarnForex |
 //|                                       https://www.earnforex.com/ |
 //+------------------------------------------------------------------+
-#property copyright "Copyright © 2009-2022, EarnForex"
+#property copyright "Copyright © 2023, EarnForex"
 #property link      "https://www.earnforex.com/metatrader-indicators/EasyTrendVisualizer/"
-#property version   "1.11"
+#property version   "1.12"
 #property strict
 
 #property description "Easy Trend Visualizer - displays trend strength, direction, and support and resistance levels."
@@ -30,11 +30,13 @@ input int ADXperiod1 = 10;
 input int ADXperiod2 = 14;
 input int ADXperiod3 = 20;
 input bool UseAlertHorizontalLine = false;
-input bool UseAlertHorizontalLineCross = false;
 input bool UseAlertUpDownArrows = false;
+input bool UseAlertHorizontalLineCrossCurrent = false;
+input bool UseAlertHorizontalLineCrossPrevious = false;
 input int NumberPHLtoTrack = 0; // How many previous horizontal lines to track for alert purposes?
-input int IgnorePHLShorterThan = 2; // Ignore previous horizontal lines short than
+input int IgnorePHLShorterThan = 2; // Ignore previous horizontal lines shorter than
 input color PHLC_Arrow_Color = clrChocolate;
+input color CHLC_Arrow_Color = clrFireBrick;
 input bool NativeAlerts = false; // Use pop-up alerts?
 input bool SendEmails = false; // Send alerts via email?
 input bool SendNotifications = false; // Send alerts via push notifications?
@@ -99,7 +101,7 @@ int init()
     ArrayResize(was_alert_phlc, PHLC_Arrow_Color);
     ArrayInitialize(was_alert_phlc, 0);
 
-    return(0);
+    return 0;
 }
 
 //+------------------------------------------------------------------+
@@ -109,6 +111,7 @@ void deinit()
 {
     // Delete all alert arrows.
     ObjectsDeleteAll(0, "PHLCArrow_", -1, OBJ_ARROW);
+    ObjectsDeleteAll(0, "CHLCArrow_", -1, OBJ_ARROW);
 }
 
 //+------------------------------------------------------------------+
@@ -208,7 +211,7 @@ int start()
     }
 
     // If at least one type and one source of alerts is defined.
-    if (((NativeAlerts) || (SendEmails) || (SendNotifications)) && ((UseAlertHorizontalLine) || (UseAlertHorizontalLineCross) || (UseAlertUpDownArrows)))
+    if (((NativeAlerts) || (SendEmails) || (SendNotifications)) && ((UseAlertHorizontalLine) || (UseAlertUpDownArrows) || (UseAlertHorizontalLineCrossCurrent) || (UseAlertHorizontalLineCrossPrevious)))
     {
         string DateTime = TimeToString(Time[0]);
         string PerStr = PeriodToString(Period());
@@ -224,20 +227,6 @@ int start()
                 if (SendEmails) SendMail(text, text);
                 if (SendNotifications) SendNotification(text);
                 was_alert_hl = Ex[1];
-            }
-        }
-        if (UseAlertHorizontalLineCross)
-        {
-            if ((Ex[1] != EMPTY_VALUE) && (Ex[2] != EMPTY_VALUE) && (was_alert_hlcross != Time[1]) && (((Close[1] > Ex[1]) && (Open[1] <= Ex[1])) || ((Close[1] <= Ex[1]) && (Open[1] > Ex[1]))))
-            {
-                string text = "ETV - HL Cross ";
-                if (Open[1] < Close[1]) text += "Up ";
-                else if (Open[1] > Close[1]) text += "Down ";
-                text += Symbol() + " @ " + PerStr;
-                if (NativeAlerts) Alert(text);
-                if (SendEmails) SendMail(text, text);
-                if (SendNotifications) SendNotification(text);
-                was_alert_hlcross = Time[1];
             }
         }
         if (UseAlertUpDownArrows)
@@ -259,15 +248,38 @@ int start()
                 was_alert_ad = Dn[0];
             }
         }
+        if (UseAlertHorizontalLineCrossCurrent)
+        {
+            if ((Ex[1] != EMPTY_VALUE) && (Ex[2] != EMPTY_VALUE) && (was_alert_hlcross != Time[1]) && (((Close[1] > Ex[1]) && (Open[1] <= Ex[1])) || ((Close[1] <= Ex[1]) && (Open[1] > Ex[1]))))
+            {
+                string text = "ETV - HL Cross ";
+                if (Open[1] < Close[1]) text += "Up ";
+                else if (Open[1] > Close[1]) text += "Down ";
+                text += Symbol() + " @ " + PerStr;
+                if (NativeAlerts) Alert(text);
+                if (SendEmails) SendMail(text, text);
+                if (SendNotifications) SendNotification(text);
+                was_alert_hlcross = Time[1];
+                string obj_name = "CHLCArrow_" + TimeToString(Time[1]);
+                ObjectCreate(0, obj_name, OBJ_ARROW, 0, Time[1], Ex[1]);
+                ObjectSetInteger(0, obj_name, OBJPROP_ARROWCODE, 200);
+                ObjectSetInteger(0, obj_name, OBJPROP_COLOR, CHLC_Arrow_Color);
+                string desc = "Price crossed: " + DoubleToString(Ex[1], Digits()) + " @ " + PerStr;
+                ObjectSetString(0, obj_name, OBJPROP_TOOLTIP, desc);
+                ObjectSetString(0, obj_name, OBJPROP_TEXT, desc);
+                ObjectSetInteger(0, obj_name, OBJPROP_SELECTABLE, false);
+                ObjectSetInteger(0, obj_name, OBJPROP_HIDDEN, false);
+            }
+        }
         // Alerts for the previous HL crosses.
-        if (NumberPHLtoTrack > 0)
+        if ((UseAlertHorizontalLineCrossPrevious) && (NumberPHLtoTrack > 0))
         {
             DateTime = TimeToString(Time[1]);
             CheckImaginaryLinesCrosses(DateTime, PerStr);
         }
     }
     
-    return(0);
+    return 0;
 }
 
 string PeriodToString(int per)
@@ -293,7 +305,7 @@ string PeriodToString(int per)
     case 1:
         return("M1");
     }
-    return("");
+    return "";
 }
 
 void CheckImaginaryLinesCrosses(string DateTime, string PerStr)
@@ -305,7 +317,7 @@ void CheckImaginaryLinesCrosses(string DateTime, string PerStr)
             string text = "ETV - PHLC Cross ";
             if (Open[1] < Close[1]) text += "Up ";
             else if (Open[1] > Close[1]) text += "Down ";
-            text += DateTime;
+            text += " " + Symbol() + " @ " + PerStr;
             Alert(text);
             string obj_name = "PHLCArrow_" + DateTime + IntegerToString(i);
             ObjectCreate(0, obj_name, OBJ_ARROW, 0, Time[1], Last_Ex[i]);
@@ -316,7 +328,7 @@ void CheckImaginaryLinesCrosses(string DateTime, string PerStr)
             ObjectSetString(0, obj_name, OBJPROP_TEXT, desc);
             ObjectSetInteger(0, obj_name, OBJPROP_SELECTABLE, false);
             ObjectSetInteger(0, obj_name, OBJPROP_HIDDEN, false);
-            text += " " + Symbol() + " @ " + PerStr;
+            text += " " + DateTime;
             if (SendEmails) SendMail(text, text);
             if (SendNotifications) SendNotification(text);
             was_alert_phlc[i] = Time[0];
