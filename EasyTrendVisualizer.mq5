@@ -1,11 +1,11 @@
 //+------------------------------------------------------------------+
 //|                                            Easy Trend Visualizer |
-//|                                      Copyright © 2023, EarnForex |
+//|                                      Copyright © 2025, EarnForex |
 //|                                       https://www.earnforex.com/ |
 //+------------------------------------------------------------------+
-#property copyright "Copyright © 2023, EarnForex"
+#property copyright "Copyright © 2025, EarnForex"
 #property link      "https://www.earnforex.com/metatrader-indicators/EasyTrendVisualizer/"
-#property version   "1.12"
+#property version   "1.13"
 
 #property description "Easy Trend Visualizer - displays trend strength, direction, and support and resistance levels."
 
@@ -66,6 +66,7 @@ double ADX3[];
 
 double Last_Ex[]; // Buffer to hold previous "last line levels". Required for price/line alert because imaginary line cross also count.
 datetime was_alert_phlc[]; // Price crosses and closes above/below previous horizontal line.
+int last_trend_for_hl_alert = 0; // 0 - up, 1 - down.
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -252,6 +253,8 @@ int OnCalculate(const int rates_total,
             }
             else Ex[i] = Ex[k];
         }
+        if (Up[i] != EMPTY_VALUE) last_trend_for_hl_alert = 0;
+        else if (Dn[i] != EMPTY_VALUE) last_trend_for_hl_alert = 1;
     }
 
     // If at least one type and one source of alerts is defined.
@@ -264,8 +267,8 @@ int OnCalculate(const int rates_total,
             if ((Ex[1] != EMPTY_VALUE) && (Ex[1] != was_alert_hl) && (Ex[1] != Ex[2]))
             {
                 string text = "ETV - HL Start ";
-                if (To[2] < Tc[2]) text += "After Uptrend";
-                else if (To[2] > Tc[2]) text += "After Downtrend";
+                if (last_trend_for_hl_alert == 0) text += "After Uptrend";
+                else text += "After Downtrend";
                 if (NativeAlerts) Alert(text);
                 text += " " + Symbol() + " @ " + PerStr;
                 if (SendEmails) SendMail(text, text);
